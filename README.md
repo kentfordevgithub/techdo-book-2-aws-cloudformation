@@ -12,7 +12,7 @@ WordPress用のインフラ構築。CloudFormationのネストを使い、スタ
 
 ## ルート
 
-### cfn-pipeline.yaml
+### cfn-pipeline.yml
 
 CloudFormationの設定ファイルデプロイ用の、CloudFormationのテンプレートファイル。このリポジトリで管理されるCloudFormationの設定ファイルを、S3に自動で配置する。S3に配置されたCloudFormationの設定ファイルを使い、サービス用のインフラを構築する。
 
