@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create VPC.
+
+# VPCの作成
+
+Parameters:
+  CidrBlock:
+    Type: String
+    # example: 10.0.0.0/16
+
+Resources:
+  # VPC
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref CidrBlock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref "AWS::StackName"
+
+Outputs:
+  VpcId:
+    Value: !Ref Vpc
+  VpcDefaultSecurityGroup:
+    Value: !GetAtt Vpc.DefaultSecurityGroup

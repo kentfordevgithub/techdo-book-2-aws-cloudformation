@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create ElasticLoadBalancer.
+
+Parameters:
+  VpcId:
+    Type: String
+  SubnetA1Id:
+    Type: String
+  SubnetC1Id:
+    Type: String
+  TargetGroupId:
+    Type: String
+  ElbSecurityGroupId:
+    Type: String
+  ElbName:
+    Type: String
+  CertificateArn:
+    Type: String
+
+Resources:
+  Elb:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Subnets:
+        - !Ref SubnetA1Id
+        - !Ref SubnetC1Id
+      SecurityGroups:
+        - !Ref ElbSecurityGroupId
+      Scheme: internet-facing
+      Name: !Ref ElbName
+
+  ListenerHttps:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref Elb
+      Protocol: HTTPS
+      Port: 443
+      Certificates:
+          - CertificateArn: !Ref CertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroupId
+
+  ListenerRedirectHttp:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref Elb
+      Protocol: HTTP
+      Port: 80
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Host: "#{host}"
+            Port: 443
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: HTTP_301
+
+Outputs:
+  ElbId:
+    Value: !Ref Elb
+
+  ElbURL:
+    Value: !GetAtt Elb.DNSName
+
+  ListenerHttpsId:
+    Value: !Ref ListenerHttps

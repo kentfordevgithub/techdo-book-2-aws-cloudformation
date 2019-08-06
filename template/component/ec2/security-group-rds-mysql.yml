@@ -1,0 +1,31 @@
+lAWSTemplateFormatVersion: 2010-09-09
+Description: Create Security Group, for RDS MySQL.
+
+# 指定のサーバからのみ、MySQL用ポートの受信を許可するセキュリティグループの作成
+
+Parameters:
+  VpcId:
+    Type: String
+  ServerSecurityGroupId:
+    Type: String
+  SecurityGroupName:
+    Type: String
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: 3306 port inbound allow, for RDS MySQL.
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          SourceSecurityGroupId: !Ref ServerSecurityGroupId
+          FromPort: 3306
+          ToPort: 3306
+      Tags:
+        - Key: Name
+          Value: !Ref SecurityGroupName
+
+Outputs:
+  SecurityGroupId:
+    Value: !Ref SecurityGroup

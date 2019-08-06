@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create ElasticLoadBalancer.
+
+Parameters:
+  VpcId:
+    Type: String
+  TargetGroupName:
+    Type: String
+  TargetInstance:
+    Type: String
+  HttpCodeMatcher:
+    Type: String
+
+Resources:
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Ref TargetGroupName
+      VpcId: !Ref VpcId
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: 80
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 4
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: !Ref HttpCodeMatcher
+      Protocol: HTTP
+      Port: 80
+      TargetType: instance
+      Targets:
+        - Id: !Ref TargetInstance
+          Port: 80
+
+Outputs:
+  TargetGroupId:
+    Value: !Ref TargetGroup

@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create Security Group, for Public Web server.
+
+# パブリックも含めて、HTTP/HTTPSの受信を許可するセキュリティグループの作成
+
+Parameters:
+  VpcId:
+    Type: String
+  VpcDefaultSecurityGroup:
+    Type: String
+  SecurityGroupName:
+    Type: String
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: HTTP(80) and HTTPS(443) inbound allow, for Public Web server.
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 443
+          ToPort: 443
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+        - IpProtocol: -1
+          SourceSecurityGroupId: !Ref VpcDefaultSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Ref SecurityGroupName
+
+Outputs:
+  SecurityGroupId:
+    Value: !Ref SecurityGroup

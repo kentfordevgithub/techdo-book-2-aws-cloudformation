@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create Internet Gateway.
+
+# インターネットゲートウェイの作成
+
+Parameters:
+  VpcId:
+    Type: String
+  InternetGatewayName:
+    Type: String
+
+Resources:
+  # インターネットゲートウェイ
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref InternetGatewayName
+
+  # インターネットゲートウェイをVPCにアタッチ
+  AttachGateWay:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VpcId
+      InternetGatewayId: !Ref InternetGateway
+
+Outputs:
+  InternetGatewayId:
+    Value: !Ref InternetGateway

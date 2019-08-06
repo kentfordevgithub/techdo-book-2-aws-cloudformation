@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create EC2 instance.
+
+Parameters:
+  # EC2インスタンスの設定
+  ImageId:
+    Type: String
+    # AWS Marketplaceのイメージを使うには、そのイメージをSubscribeしないと、ImageIdがわからない
+  InstanceType:
+    Type: String
+    Default: t2.micro
+  KeyName:
+    Type: String
+    # 事前に指定の名前のキーペアを作成しておくこと(マネジメントコンソールのEC2のキーペア項目から)
+  # EC2インスタンスが利用するリソースの対象
+  # 対象のセキュリティグループなど
+  GroupSet:
+    Type: CommaDelimitedList
+    # コマンドラインから指定する場合、「,」を「\\\,」にエスケープする必要がある
+  # EC2インスタンスを配置する対象のサブネット
+  SubnetId:
+    Type: String
+  # パブリックIPのフリだしをするかどうか(文字列を判定して、最終的なBooleanの値を作成する)
+  AssociatePublicIpAddressStr:
+    Type: String
+  InstanceName:
+    Type: String
+
+Conditions:
+  # 文字列で渡されたパブリックIPの設定を、Booleanに変換
+  AssociatePublicIpAddress: !Equals [ !Ref AssociatePublicIpAddressStr, "true" ]
+
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: !If [ AssociatePublicIpAddress, true, false ] 
+          DeviceIndex: '0'
+          GroupSet: !Ref GroupSet
+          SubnetId: !Ref SubnetId
+      Tags:
+        - Key: Name
+          Value: !Ref InstanceName
+
+Outputs:
+  EC2InstanceId:
+    Value: !Ref EC2Instance

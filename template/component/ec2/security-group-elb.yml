@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create Security Group, for Elastic Load Balancer.
+
+# パブリックも含めて、HTTPSの受信を許可するセキュリティグループの作成
+
+Parameters:
+  VpcId:
+    Type: String
+  VpcDefaultSecurityGroup:
+    Type: String
+  SecurityGroupName:
+    Type: String
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: HTTPS(443) inbound allow, for Elastic Load Balancer.
+      SecurityGroupIngress:
+        # HTTPSへのリダイレクト用の80ポートの許可
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 443
+          ToPort: 443
+        - IpProtocol: -1
+          SourceSecurityGroupId: !Ref VpcDefaultSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Ref SecurityGroupName
+
+Outputs:
+  SecurityGroupId:
+    Value: !Ref SecurityGroup

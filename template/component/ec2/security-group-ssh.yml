@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create Security Group, for SSH.
+
+# SSH接続を許可するセキュリティグループの作成
+
+Parameters:
+  VpcId:
+    Type: String
+  VpcDefaultSecurityGroup:
+    Type: String
+  SecurityGroupName:
+    Type: String
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: 22 port inbound allow, for SSH.
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 22
+          ToPort: 22
+        - IpProtocol: -1
+          SourceSecurityGroupId: !Ref VpcDefaultSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Ref SecurityGroupName
+
+Outputs:
+  SecurityGroupId:
+    Value: !Ref SecurityGroup

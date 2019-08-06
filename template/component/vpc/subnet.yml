@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create Subnet.
+
+# サブネットの作成
+
+Parameters:
+  # for Subnet
+  VpcId:
+    Type: String
+  CidrBlock:
+    Type: String
+    # example: 10.0.1.0/24
+  AvailabilityZone:
+    Type: String
+    # example: ap-northeast-1a
+  SubNetName:
+    Type: String
+  # for RouteTableTableAssociation
+  RouteTableId:
+    Type: String
+
+Resources:
+  Subnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Ref CidrBlock
+      AvailabilityZone: !Ref AvailabilityZone
+      Tags:
+        - Key: Name
+          Value: !Ref SubNetName
+
+  RouteTableTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        SubnetId: !Ref Subnet
+        RouteTableId: !Ref RouteTableId
+
+Outputs:
+  SubnetId:
+    Value: !Ref Subnet

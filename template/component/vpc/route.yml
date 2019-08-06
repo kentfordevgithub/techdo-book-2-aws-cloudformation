@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create Internet Gateway.
+
+# ルートの作成
+
+Parameters:
+  RouteTableId:
+    Type: String
+  InternetGatewayId:
+    Type: String
+  DestinationCidrBlock:
+    Type: String
+    # example: 0.0.0.0/0
+
+Resources:
+  Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTableId
+      GatewayId: !Ref InternetGatewayId
+      DestinationCidrBlock: !Ref DestinationCidrBlock

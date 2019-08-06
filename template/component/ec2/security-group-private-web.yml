@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create Security Group, for Private Web server.
+
+# HTTPの受信を許可するセキュリティグループの作成
+
+Parameters:
+  VpcId:
+    Type: String
+  ElbDefaultSecurityGroup:
+    Type: String
+  VpcDefaultSecurityGroup:
+    Type: String
+  SecurityGroupName:
+    Type: String
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: HTTP(80) inbound allow, for  Private Web server.
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          SourceSecurityGroupId: !Ref ElbDefaultSecurityGroup
+          FromPort: 80
+          ToPort: 80
+        - IpProtocol: -1
+          SourceSecurityGroupId: !Ref VpcDefaultSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Ref SecurityGroupName
+
+Outputs:
+  SecurityGroupId:
+    Value: !Ref SecurityGroup

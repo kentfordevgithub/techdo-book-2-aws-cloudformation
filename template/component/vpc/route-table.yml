@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create Route Table.
+
+# ルートテーブルの作成
+
+Parameters:
+  VpcId:
+    Type: String
+  RouteTableName:
+    Type: String
+
+Resources:
+  RouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref VpcId
+        Tags:
+          - Key: Name
+            Value: !Ref RouteTableName
+
+Outputs:
+  RouteTableId:
+    Value: !Ref RouteTable
