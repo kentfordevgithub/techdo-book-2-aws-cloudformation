@@ -1,0 +1,232 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  Domain:
+    Type: String
+  AmiImageId:
+    Type: String
+
+Resources:
+  # ネットワーク関係の設定
+  Vpc:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        CidrBlock: 10.0.0.0/16
+      TemplateURL: https://s3-no-domain.com/component/vpc/vpc.yml
+
+  RouteTableA1:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: Vpc
+    Properties:
+      Parameters:
+        VpcId: !GetAtt Vpc.Outputs.VpcId
+        RouteTableName: !Sub ${AWS::StackName}-rt-a1
+      TemplateURL: https://s3-no-domain.com/component/vpc/route-table.yml
+
+  RouteTableA2:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: Vpc
+    Properties:
+      Parameters:
+        VpcId: !GetAtt Vpc.Outputs.VpcId
+        RouteTableName: !Sub ${AWS::StackName}-rt-a2
+      TemplateURL: https://s3-no-domain.com/component/vpc/route-table.yml
+
+  RouteTableC1:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: Vpc
+    Properties:
+      Parameters:
+        VpcId: !GetAtt Vpc.Outputs.VpcId
+        RouteTableName: !Sub ${AWS::StackName}-rt-c1
+      TemplateURL: https://s3-no-domain.com/component/vpc/route-table.yml
+
+  RouteTableC2:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: Vpc
+    Properties:
+      Parameters:
+        VpcId: !GetAtt Vpc.Outputs.VpcId
+        RouteTableName: !Sub ${AWS::StackName}-rt-c2
+      TemplateURL: https://s3-no-domain.com/component/vpc/route-table.yml
+
+  SubnetA1:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: RouteTableA1
+    Properties:
+      Parameters:
+        VpcId: !GetAtt Vpc.Outputs.VpcId
+        RouteTableId: !GetAtt RouteTableA1.Outputs.RouteTableId
+        CidrBlock: 10.0.1.0/24
+        AvailabilityZone: ap-northeast-1a
+        SubNetName: !Sub ${AWS::StackName}-sn-a1
+      TemplateURL: https://s3-no-domain.com/component/vpc/subnet.yml
+
+  SubnetA2:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: RouteTableA2
+    Properties:
+      Parameters:
+        VpcId: !GetAtt Vpc.Outputs.VpcId
+        RouteTableId: !GetAtt RouteTableA2.Outputs.RouteTableId
+        CidrBlock: 10.0.2.0/24
+        AvailabilityZone: ap-northeast-1a
+        SubNetName: !Sub ${AWS::StackName}-sn-a2
+      TemplateURL: https://s3-no-domain.com/component/vpc/subnet.yml
+
+  SubnetC1:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: RouteTableC1
+    Properties:
+      Parameters:
+        VpcId: !GetAtt Vpc.Outputs.VpcId
+        RouteTableId: !GetAtt RouteTableC1.Outputs.RouteTableId
+        CidrBlock: 10.0.3.0/24
+        AvailabilityZone: ap-northeast-1c
+        SubNetName: !Sub ${AWS::StackName}-sn-c1
+      TemplateURL: https://s3-no-domain.com/component/vpc/subnet.yml
+
+  SubnetC2:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: RouteTableC2
+    Properties:
+      Parameters:
+        VpcId: !GetAtt Vpc.Outputs.VpcId
+        RouteTableId: !GetAtt RouteTableC2.Outputs.RouteTableId
+        CidrBlock: 10.0.4.0/24
+        AvailabilityZone: ap-northeast-1c
+        SubNetName: !Sub ${AWS::StackName}-sn-c2
+      TemplateURL: https://s3-no-domain.com/component/vpc/subnet.yml
+
+  InternetGateway:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: Vpc
+    Properties:
+      Parameters:
+        VpcId: !GetAtt Vpc.Outputs.VpcId
+        InternetGatewayName: !Sub ${AWS::StackName}-igw
+      TemplateURL: https://s3-no-domain.com/component/vpc/internet-gateway.yml
+
+  RouteA1:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: InternetGateway
+    Properties:
+      Parameters:
+        RouteTableId: !GetAtt RouteTableA1.Outputs.RouteTableId
+        InternetGatewayId: !GetAtt InternetGateway.Outputs.InternetGatewayId
+        DestinationCidrBlock: 0.0.0.0/0
+      TemplateURL: https://s3-no-domain.com/component/vpc/route.yml
+
+  RouteC1:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: InternetGateway
+    Properties:
+      Parameters:
+        RouteTableId: !GetAtt RouteTableC1.Outputs.RouteTableId
+        InternetGatewayId: !GetAtt InternetGateway.Outputs.InternetGatewayId
+        DestinationCidrBlock: 0.0.0.0/0
+      TemplateURL: https://s3-no-domain.com/component/vpc/route.yml
+
+  # セキュリティグループ
+  SecurityGroupEc2:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: Vpc
+    Properties:
+      Parameters:
+        VpcId: !GetAtt Vpc.Outputs.VpcId
+        SecurityGroupName: !Sub ${AWS::StackName}-sg-public-ec2
+        VpcDefaultSecurityGroup: !GetAtt Vpc.Outputs.VpcDefaultSecurityGroup
+      TemplateURL: https://s3-no-domain.com/component/ec2/security-group-public-web.yml
+
+  SecurityGroupElb:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: Vpc
+    Properties:
+      Parameters:
+        VpcId: !GetAtt Vpc.Outputs.VpcId
+        SecurityGroupName: !Sub ${AWS::StackName}-sg-elb
+        VpcDefaultSecurityGroup: !GetAtt Vpc.Outputs.VpcDefaultSecurityGroup
+      TemplateURL: https://s3-no-domain.com/component/ec2/security-group-elb.yml
+
+  SecurityGroupSsh:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: Vpc
+    Properties:
+      Parameters:
+        VpcId: !GetAtt Vpc.Outputs.VpcId
+        SecurityGroupName: !Sub ${AWS::StackName}-sg-ssh
+        VpcDefaultSecurityGroup: !GetAtt Vpc.Outputs.VpcDefaultSecurityGroup
+      TemplateURL: https://s3-no-domain.com/component/ec2/security-group-ssh.yml
+
+  # 証明書
+  Certificate:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        Domain: !Ref Domain
+      TemplateURL: https://s3-no-domain.com/component/certificate/certificate.yml
+
+  # EC2
+  EC2InstanceWordpress:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: SubnetA1
+    Properties:
+      Parameters:
+        ImageId: !Ref AmiImageId
+        InstanceType: t2.nano
+        KeyName: testkeyname
+        GroupSet: 
+          !Join
+          - ","
+          - - !GetAtt SecurityGroupEc2.Outputs.SecurityGroupId
+            - !GetAtt SecurityGroupElb.Outputs.SecurityGroupId
+            - !GetAtt SecurityGroupSsh.Outputs.SecurityGroupId
+        SubnetId: !GetAtt SubnetA1.Outputs.SubnetId
+        AssociatePublicIpAddressStr: true
+        InstanceName: !Sub ${AWS::StackName}-ec2
+      TemplateURL: https://s3-no-domain.com/component/ec2/ec2.yml
+
+  # ターゲットグループ
+  TargetGroupInstance:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: EC2InstanceWordpress
+    Properties:
+      Parameters:
+        VpcId: !GetAtt Vpc.Outputs.VpcId
+        TargetGroupName: !Sub ${AWS::StackName}-tg
+        TargetInstance: !GetAtt EC2InstanceWordpress.Outputs.EC2InstanceId
+        HttpCodeMatcher: 302 # WordPressマルチサイトではリダイレクトが返されるためそれに合わせたステータスコード
+      TemplateURL: https://s3-no-domain.com/component/ec2/target_group_instances.yml
+
+  # ロードバランサ
+  Elb:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: Certificate
+    Properties:
+      Parameters:
+        VpcId: !GetAtt Vpc.Outputs.VpcId
+        SubnetA1Id: !GetAtt SubnetA1.Outputs.SubnetId
+        SubnetC1Id: !GetAtt SubnetC1.Outputs.SubnetId
+        TargetGroupId: !GetAtt TargetGroupInstance.Outputs.TargetGroupId
+        ElbSecurityGroupId: !GetAtt SecurityGroupElb.Outputs.SecurityGroupId
+        ElbName:  !Sub ${AWS::StackName}-elb
+        CertificateArn: !GetAtt Certificate.Outputs.CertificateId
+      TemplateURL: https://s3-no-domain.com/component/ec2/elb.yml
+
+  # リスナールール
+  ListnerRule:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: Elb
+    Properties:
+      Parameters:
+        ListenerId: !GetAtt Elb.Outputs.ListenerHttpsId
+        TargetGroupId: !GetAtt TargetGroupInstance.Outputs.TargetGroupId
+        CertificateArn: !GetAtt Certificate.Outputs.CertificateId
+        Domain: !Ref Domain
+        RulePriority: 1
+      TemplateURL: https://s3-no-domain.com/component/ec2/listener_rule.yml
+
+  # 以降、追加されるサイト別の作成
+  # 証明書
+  # リスナールール
