@@ -1,0 +1,13 @@
+version: 0.2
+
+phases:
+  build:
+    commands:
+      - echo Delete 
+      - aws s3 rm --recursive "s3://${ARTIFACT_BUCKET}/" 
+      - aws s3 rm --recursive "s3://${DEPLOY_BUCKET}/" 
+
+artifacts:
+  files:
+    - '**/*'
+  base-directory: template

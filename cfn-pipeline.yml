@@ -1,0 +1,183 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: S3 Bucket and CodePipeline and Build, for CloudFormation YAML deploy.
+
+Parameters:
+  # テンプレート、配置バケット名
+  S3BucketNameTemplate:
+    Type: String
+    Default: cloudformation-template-pipeline
+  # ビルド結果、配置バケット名
+  S3BucketNameBuildArtifact:
+    Type: String
+    Default: cloudformation-template-pipeline-artifact
+  # テンプレートファイル取得先、GitHubアカウント名
+  GitHubOwner:
+    Type: String
+    Default: '{{resolve:ssm:github-owner:1}}'
+  # テンプレートファイル取得先、GitHubトークン
+  GitHubToken:
+    Type: String
+    Default: '{{resolve:ssm:github-token:1}}'
+  # テンプレートファイル取得先、GitHubリポジトリ名
+  Repository:
+    Type: String
+    Default: '{{resolve:ssm:git-repository-cfn-template:1}}'
+  # テンプレートファイル取得先、GitHubブランチ名
+  Branch:
+    Type: String 
+    Default: master
+  # パイプライン、ビルド名
+  BuildName:
+    Type: String
+    Default: cloudformation-template-deploy
+  # パイプライン、パイプライン名
+  PipelineName:
+    Type: String
+    Default: cloudformation-template-pipeline
+
+Resources:
+  # テンプレートファイルを配置する、S3バケットを作成
+  S3BucketTemplate:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: !Ref S3BucketNameTemplate
+      # バケットの中身を非公開にする設定(全てAWSの推奨値(非公開にする)を指定)
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # ビルド結果保存用のS3Bucketを設定
+  S3BucketBuildArtifact:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: !Ref S3BucketNameBuildArtifact
+      # バケットの中身を非公開にする設定(全てAWSの推奨値(非公開にする)を指定)
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # ビルド用IAM
+  IAMRoleBuild:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS
+        - arn:aws:iam::aws:policy/AWSCodeDeployRoleForECSLimited
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+
+  # パイプライン用IAM
+  IAMRolePipeline:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AWSCodeBuildAdminAccess
+        - arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS
+        - arn:aws:iam::aws:policy/AWSCodeDeployRoleForECSLimited
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+        - arn:aws:iam::aws:policy/AmazonECS_FullAccess
+
+  # パイプライン、ビルド設定
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Description: CloudFormation Template, Build Project.
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Description: !Sub Building stage for ${Branch}.
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:1.0-1.8.0
+        Type: LINUX_CONTAINER
+        # ビルド実行時の環境変数
+        EnvironmentVariables:
+          # ビルドアーティファクトのS3バケット名
+          - Name: ARTIFACT_BUCKET
+            Value: !Ref S3BucketNameBuildArtifact
+          # デプロイ先のS3バケット名
+          - Name: DEPLOY_BUCKET
+            Value: !Ref S3BucketNameTemplate
+      Name: !Ref BuildName
+      ServiceRole: !GetAtt IAMRoleBuild.Arn
+      Source:
+        Type: CODEPIPELINE
+      TimeoutInMinutes: 10
+
+  # パイプライン設定
+  ProjectPipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      ArtifactStore:
+        Location: !Ref S3BucketBuildArtifact
+        Type: S3
+      Name: !Ref PipelineName
+      RestartExecutionOnUpdate: false
+      RoleArn: !GetAtt IAMRolePipeline.Arn
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: 1
+              OutputArtifacts:
+                - Name: SourceOutput
+              Configuration:
+                Owner: !Ref GitHubOwner
+                OAuthToken: !Ref GitHubToken
+                Repo: !Ref Repository
+                Branch: !Ref Branch
+              RunOrder: 1
+        - Name: Build
+          Actions:
+            - Name: CodeBuild
+              InputArtifacts:
+                - Name: SourceOutput
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildProject
+              OutputArtifacts:
+                - Name: CodebuildOutput
+              RunOrder: 1
+        - Name: Deploy
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: S3
+              InputArtifacts:
+                - Name: CodebuildOutput
+              Configuration:
+                BucketName: !Ref S3BucketNameTemplate
+                Extract: true
+              RunOrder: 1
